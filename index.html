@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工程 AI 出圖系統</title>
+<meta name="description" content="自動生成高品質 AI 繪圖的提示語">
+<meta name="theme-color" content="#1a6fdb">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="工程繪圖">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue:   #1a6fdb;
+  --blue2:  #0d4fa8;
+  --accent: #00c2a8;
+  --bg:     #f4f6fb;
+  --card:   #ffffff;
+  --border: #dde3ef;
+  --text:   #1e2533;
+  --muted:  #6b7a99;
+  --tag:    #e8f0fe;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Noto Sans TC', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── Header ── */
+.header {
+  background: linear-gradient(135deg, var(--blue2) 0%, var(--blue) 60%, #1e9dd6 100%);
+  color: #fff;
+  padding: 18px 20px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 12px rgba(26,111,219,.25);
+}
+.header-icon { flex: 0 0 auto; height: 60px; display: flex; align-items: center; }
+.header-icon img { height: 100%; width: auto; display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
+.header-title { font-size: 26px; font-weight: 700; letter-spacing: .5px; }
+.header-sub { font-size: 16px; opacity: .8; margin-top: 2px; }
+
+/* ── Tabs ── */
+.tabs {
+  display: flex;
+  overflow-x: auto;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  gap: 2px;
+  padding: 0 6px;
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  flex: 0 0 auto;
+  padding: 11px 14px 9px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  color: var(--muted);
+  white-space: nowrap;
+  transition: color .2s, border-color .2s;
+}
+.tab:hover { color: var(--blue); }
+.tab.active { border-bottom-color: var(--blue); color: var(--blue); font-weight: 700; }
+
+/* ── Main layout ── */
+.main { padding: 14px 14px 30px; display: flex; flex-direction: column; gap: 14px; }
+
+/* ── Card ── */
+.card {
+  background: var(--card);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.04);
+}
+.card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--blue2);
+  letter-spacing: .3px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Form elements ── */
+.field { margin-bottom: 12px; }
+.field:last-child { margin-bottom: 0; }
+label {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 5px;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+}
+select, input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: 'Noto Sans TC', sans-serif;
+  font-size: 16px;
+  color: var(--text);
+  background: #fafbff;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+select:focus, input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(26,111,219,.12);
+}
+input::placeholder { color: #aab4cc; }
+
+/* ── Option row ── */
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* ── Drawing type chips ── */
+.chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 4px; }
+.chip {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 16px;
+  font-weight: 600;
+  background: var(--tag);
+  color: var(--blue2);
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: all .2s;
+}
+.chip.active {
+  background: var(--blue);
+  color: #fff;
+  border-color: var(--blue);
+}
+.chip:hover:not(.active) { border-color: var(--blue); }
+
+/* ── Scale chips ── */
+.scale-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.scale-chip {
+  padding: 5px 11px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 600;
+  background: #f0f4ff;
+  color: #4a6fa5;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: all .2s;
+}
+.scale-chip.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* ── Generate button ── */
+.btn-generate {
+  width: 100%;
+  padding: 13px;
+  background: linear-gradient(135deg, var(--blue) 0%, #1e9dd6 100%);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  letter-spacing: .5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(26,111,219,.28);
+  transition: opacity .2s, transform .15s;
+}
+.btn-generate:active { transform: scale(.98); opacity: .9; }
+
+/* ── Output ── */
+.output-area {
+  width: 100%;
+  height: 290px;
+  padding: 12px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 15px;
+  line-height: 1.7;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f7f9ff;
+  color: #1e2533;
+  resize: vertical;
+  outline: none;
+}
+.output-area:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(26,111,219,.1); }
+
+.btn-row { display: flex; gap: 8px; margin-top: 10px; }
+.btn-copy, .btn-clear {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity .2s;
+}
+.btn-copy { background: var(--accent); color: #fff; }
+.btn-clear { background: #ffe9e9; color: #cc3344; }
+.btn-copy:active, .btn-clear:active { opacity: .8; }
+
+/* ── Tips ── */
+.tips {
+  background: linear-gradient(135deg,#e8f5ff,#eefaf8);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 14px;
+  color: #2a5080;
+  line-height: 1.8;
+  border-left: 4px solid var(--accent);
+}
+.tips strong { font-weight: 700; }
+
+/* ── Toast ── */
+#toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #1e2533;
+  color: #fff;
+  padding: 10px 22px;
+  border-radius: 24px;
+  font-size: 15px;
+  font-weight: 600;
+  opacity: 0;
+  transition: all .3s;
+  pointer-events: none;
+  z-index: 999;
+}
+/* ── Custom Combobox（標準尺寸）── */
+.combobox-wrap {
+  position: relative;
+  width: 100%;
+}
+.combobox-input-row {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fafbff;
+  overflow: hidden;
+  transition: border-color .2s, box-shadow .2s;
+}
+.combobox-input-row:focus-within {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(26,111,219,.12);
+}
+.combobox-input-row input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 9px 8px 9px 12px;
+  font-size: 16px;
+  color: var(--text);
+  outline: none;
+  margin: 0;
+  box-shadow: none;
+}
+.combobox-input-row input:focus {
+  border: none;
+  box-shadow: none;
+}
+.combobox-btn {
+  padding: 0 10px;
+  height: 100%;
+  min-height: 38px;
+  background: none;
+  border: none;
+  border-left: 1px solid var(--border);
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+}
+.combobox-btn:active { background: #f0f4ff; }
+.combobox-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(0,0,0,.13);
+  z-index: 200;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.combobox-dropdown.open { display: block; }
+.combobox-option {
+  padding: 11px 14px;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--text);
+  border-bottom: 1px solid #f0f2f8;
+}
+.combobox-option:last-child { border-bottom: none; }
+.combobox-option:active,
+.combobox-option.selected { background: var(--tag); color: var(--blue2); font-weight: 600; }
+.combobox-blank {
+  color: var(--muted);
+  font-size: 14px;
+  font-style: italic;
+  border-bottom: 2px solid var(--border);
+  background: #f7f9ff;
+}
+/* 原生 select 作為下拉選單 */
+.preset-select {
+  display: none;
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0; right: 0;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(0,0,0,.13);
+  z-index: 200;
+  background: #fff;
+  font-family: 'Noto Sans TC', sans-serif;
+  font-size: 16px;
+  color: var(--text);
+  max-height: 220px;
+  overflow-y: auto;
+  outline: none;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.preset-select.open {
+  display: block;
+}
+.preset-select option {
+  padding: 10px 14px;
+  font-size: 13.5px;
+}
+.pwa-install-btn { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 999; border: none; border-radius: 999px; padding: 12px 18px; font-size: 15px; font-weight: 700; color: #fff; background: #1e3a8a; box-shadow: 0 4px 14px rgba(30,58,138,.35); cursor: pointer; }
+.pwa-install-btn[hidden] { display: none; }
+@media print { .pwa-install-btn { display: none !important; } }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-icon"><img src="data:image/png;base64,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" alt="Logo"></div>
+  <div>
+    <div class="header-title">工程 AI 出圖系統</div>
+    <div class="header-sub">生成式AI土建工程應用班專用版</div>
+  </div>
+</div>
+
+<!-- Category Tabs -->
+<div class="tabs" id="tabs">
+  <div class="tab active"  onclick="setCategory('RC結構',this)">🏗 RC結構</div>
+  <div class="tab" onclick="setCategory('鋼結構',this)">🔩 鋼結構</div>
+  <div class="tab" onclick="setCategory('路橋工程',this)">🌉 路橋</div>
+  <div class="tab" onclick="setCategory('擋土護坡',this)">⛰ 擋土</div>
+  <div class="tab" onclick="setCategory('排水箱涵',this)">💧 排水</div>
+  <div class="tab" onclick="setCategory('水土保持',this)">🌱 水保</div>
+  <div class="tab" onclick="setCategory('景觀植栽',this)">🌳 景觀</div>
+  <div class="tab" onclick="setCategory('室內裝修',this)">🪵 室內</div>
+</div>
+
+<div class="main">
+
+  <!-- 參數設定 -->
+  <div class="card">
+    <div class="card-title">⚙️ 繪圖參數設定</div>
+
+    <div class="row2">
+      <div class="field">
+        <label>工程物件</label>
+        <select id="object"></select>
+      </div>
+      <div class="field">
+        <label>標準尺寸 / 規格</label>
+        <div class="combobox-wrap" id="presetWrap">
+          <div class="combobox-input-row">
+            <input id="presetCustom" type="text" placeholder="選擇或直接輸入尺寸…" autocomplete="off"
+              oninput="filterCombobox(this.value)">
+            <button class="combobox-btn" type="button"
+              onmousedown="event.preventDefault()"
+              onclick="toggleCombobox()">▾</button>
+          </div>
+          <select id="presetSelect" class="preset-select" size="1" onchange="onPresetChange()"></select>
+        </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>圖面類型</label>
+      <div class="chips" id="typeChips">
+        <div class="chip active" onclick="selectType(this)">平面圖</div>
+        <div class="chip" onclick="selectType(this)">斷面圖</div>
+        <div class="chip" onclick="selectType(this)">立面圖</div>
+        <div class="chip" onclick="selectType(this)">大樣圖</div>
+        <div class="chip" onclick="selectType(this)">平面 + 斷面</div>
+        <div class="chip" onclick="selectType(this)">鋼筋圖</div>
+        <div class="chip" onclick="selectType(this)">手繪圖</div>
+        <div class="chip" onclick="selectType(this)">平面 + 斷面 + 細部</div>
+        <div class="chip" onclick="selectType(this)">3D透視圖</div>
+        <div class="chip" onclick="selectType(this)">爆炸圖</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>圖面比例</label>
+      <div class="scale-chips" id="scaleChips">
+        <div class="scale-chip" onclick="selectScale(this)">1:10</div>
+        <div class="scale-chip" onclick="selectScale(this)">1:20</div>
+        <div class="scale-chip" onclick="selectScale(this)">1:30</div>
+        <div class="scale-chip active" onclick="selectScale(this)">1:50</div>
+        <div class="scale-chip" onclick="selectScale(this)">1:100</div>
+        <div class="scale-chip" onclick="selectScale(this)">1:200</div>
+        <div class="scale-chip" onclick="selectScale(this)">NTS（不按比例）</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>施工細節 / 補充說明（可選）</label>
+      <input id="detail" placeholder="例如：D16@200、防水層、止水鋼板、螺栓規格 M20…">
+    </div>
+
+    <div class="field">
+      <label>材料規範 / 設計標準（可選）</label>
+      <input id="standard" placeholder="例如：ACI 318、CNS 560、AISC 360…">
+    </div>
+  </div>
+
+  <!-- 生成按鈕 -->
+  <button class="btn-generate" onclick="generate()">
+    🚀 一鍵生成 AI 繪圖提示語
+  </button>
+
+  <!-- 輸出 -->
+  <div class="card">
+    <div class="card-title">📄 輸出提示語（英文）</div>
+    <textarea class="output-area" id="output" readonly placeholder="點擊上方按鈕，自動生成 AI 繪圖提示語…"></textarea>
+    <div class="btn-row">
+      <button class="btn-copy" onclick="copyText()">📋 複製提示語</button>
+      <button class="btn-clear" onclick="clearOutput()">🗑 清除</button>
+    </div>
+  </div>
+
+  <!-- 使用提示 -->
+  <div class="tips">
+    <strong>📌 使用提示</strong><br>
+    1. 選擇工程類別 → 設定物件與尺寸 → 點擊「一鍵生成」<br>
+    2. 複製提示語後，貼至 <strong>ChatGPT / Midjourney / DALL·E / Gemini</strong> 等 AI 工具<br>
+    3. 施工細節欄位填寫越具體，生成圖面越精準<br>
+    4. 建議搭配 AutoCAD 圖層設定或 BIM 模型說明效果更佳
+  </div>
+
+</div>
+
+<div id="toast">✅ 提示語已複製</div>
+
+<script>
+// ════════════════════════════════════════════════
+//  資料設定 – 依各類工程繪圖規範強化 Prompt
+//  介面：繁體中文  |  Prompt 輸出：英文
+// ════════════════════════════════════════════════
+const config = {
+
+  // ────────────────────────────────────────────
+  // RC 結構：依 建築物混凝土結構設計規範(112年版)、ACI 318、台灣建築技術規則
+  // ────────────────────────────────────────────
+  'RC結構': {
+    objects: [
+      { label: '矩形柱 (Rectangular Column)',  en: 'rectangular reinforced concrete column' },
+      { label: '圓形柱 (Circular Column)',     en: 'circular reinforced concrete column' },
+      { label: '矩形梁 (Rectangular Beam)',    en: 'rectangular reinforced concrete beam' },
+      { label: 'T型梁 (T-Beam)',              en: 'T-shaped reinforced concrete beam' },
+      { label: '樓板 (Slab)',                 en: 'reinforced concrete floor slab (one-way / two-way)' },
+      { label: '基腳 (Spread Footing)',       en: 'reinforced concrete isolated spread footing' },
+      { label: '地中梁 (Grade Beam)',         en: 'reinforced concrete grade beam' },
+      { label: '剪力牆 (Shear Wall)',         en: 'reinforced concrete shear wall with boundary element' },
+      { label: '樓梯 (Staircase)',            en: 'reinforced concrete staircase with landing' },
+    ],
+    presets: ['400×400 mm','500×500 mm','600×600 mm','300×600 mm','400×800 mm','樓板厚 150 mm','樓板厚 200 mm','基腳 1500×1500×600 mm'],
+    // ── 規範依據：建築物混凝土結構設計規範(112年版) / ACI 318-19 / 建築技術規則構造篇
+    spec: `Reinforced concrete (RC) structural drawing per Taiwan "建築物混凝土結構設計規範" (112年版, 2023) and ACI 318-19.
+Material: Concrete f'c = 28 MPa (280 kgf/cm²); Rebar per CNS 560 — longitudinal bars SD420W (fy = 420 MPa); seismic systems use SD420W / SD280W per 建築物混凝土結構設計規範 Sec. 20.2.2.5.
+MANDATORY elements to draw:
+  • Plan view: column/wall grid with centerline dimensions, rebar layout (longitudinal + ties/stirrups), bar marks
+  • Section view: full cross-section at mid-span and at support, showing all rebar layers, concrete cover (40 mm for beams/columns, 60 mm for footings), and stirrup hooks (135° seismic hook)
+  • Rebar schedule table: bar mark, diameter, spacing, length, quantity, total weight
+  • Lap splice length: ≥ 1.3 × development length per ACI 318 Sec. 25.5; show lap zone with hatching
+  • Hook and bend geometry: standard 90°/135° hook with extension length per ACI 318 Fig. R25.3.1
+  • Concrete cover dimensions on both faces; note "CLEAR COVER = XX mm"
+  • Formwork outline shown as dashed external boundary
+  • Expansion/construction joint location and type (waterstop if below grade)`,
+    notes: `Annotation rules (all text in 繁體中文):
+  • Rebar notation: D followed by diameter (D10, D13, D16, D19, D22, D25, D29, D32)
+  • Spacing notation: D16@200 (pitch in mm); two-way slab: D13@150 EW (each way)
+  • Use standard CNS hatching: RC section = diagonal hatching 45° at 2 mm pitch; soil = random dots
+  • Leader line with arrowhead for all callouts; dimension line with tick marks, no arrowheads
+  • Grid reference: column line labels (A, B, C... / 1, 2, 3...) shown at top and left margins
+  • Note block: concrete strength, rebar grade, cover, design code, date, revision cloud`,
+  },
+
+  // ────────────────────────────────────────────
+  // 鋼結構：依 鋼構造建築物鋼結構設計技術規範（內政部）、CNS 2473、台灣建築耐震設計規範
+  // ────────────────────────────────────────────
+  '鋼結構': {
+    objects: [
+      { label: 'H型鋼梁 (H-Beam)',            en: 'wide-flange H-section steel beam (W-shape)' },
+      { label: 'H型鋼柱 (H-Column)',          en: 'wide-flange H-section steel column (W-shape)' },
+      { label: '箱型柱 (Box Column)',         en: 'hollow structural section (HSS) box column' },
+      { label: '螺栓接合 (Bolted Connection)',en: 'high-strength bolted moment connection (end-plate)' },
+      { label: '焊接接合 (Welded Connection)',en: 'complete joint penetration (CJP) welded connection' },
+      { label: '柱底板 (Base Plate)',         en: 'steel column base plate with J-bolt / headed anchor' },
+      { label: '斜撐 (Brace)',               en: 'structural steel concentric diagonal brace (X or chevron)' },
+      { label: '鋼梁-RC柱接合 (Composite)',  en: 'composite steel beam to RC column connection detail' },
+    ],
+    presets: ['H-300×300×10×15','H-400×200×8×13','H-500×200×10×16','H-588×300×12×20','□-300×300×12','□-400×400×16','L-150×150×12'],
+    // ── 規範依據：鋼構造建築物鋼結構設計技術規範（內政部）/ 鋼構造建築物鋼結構施工規範 / CNS 2473 / 台灣建築耐震設計規範
+    spec: `Structural steel drawing per Taiwan "鋼構造建築物鋼結構設計技術規範" (MOLI, 2010) and "鋼構造建築物鋼結構施工規範" (MOLI, 2007).
+Material: Structural steel per CNS 2473 SS400 (fy=245 MPa, fu=400 MPa) or SM490 (fy=325 MPa, fu=490 MPa); high-strength bolts F10T per CNS 12209 or ASTM A490.
+Design method: Allowable Stress Design (ASD) or Load and Resistance Factor Design (LRFD) per 設計技術規範 Chapter 2; seismic design per 建築物耐震設計規範 and 建築技術規則.
+MANDATORY elements to draw:
+  • Framing plan: member centerlines, grid, strong-axis orientation arrows
+  • Connection detail (both elevation and plan cut):
+      – Bolt pattern: diameter, grade, gauge & pitch (e.g. M20 F10T per CNS 12209, pitch=70 mm, gauge=140 mm)
+      – Bolt hole type: standard (STD) / oversized (OVS); edge distance ≥ 1.5d, spacing ≥ 3d per 施工規範 Ch.5
+      – Weld symbol per CNS 3-B1001: process (SMAW/FCAW), fillet leg size (mm), CJP or partial-joint-penetration (PJP)
+      – Stiffener plates: thickness, width, weld to flange and web per 設計技術規範 Ch.6
+      – Gusset plate with clip corner (chamfer 25×25 mm); block shear check note
+  • Base plate: plate size and thickness, anchor bolt (地腳螺栓) layout per 施工規範 Ch.10, grout pocket depth ≥ 25 mm
+  • Surface treatment and painting schedule per 施工規範 Ch.7: paint system, DFT (μm), primer + topcoat
+  • Shop/field weld distinction: shop weld (工廠焊) = solid weld symbol; field weld (現場焊) = flag symbol
+  • Erection (組立) mark on every member: beam = B×× , column = C×× , brace = BR××
+  • Camber note on beams if span > 9 m: "起拱量 = L/500 (工廠預拱)"`,
+    notes: `Annotation rules (all text in 繁體中文):
+  • Section callout: H-300×150×6.5×9 (H型鋼 高×翼寬×腹板厚×翼板厚, mm) or □-300×300×12 (方管)
+  • Steel grade label: "CNS 2473 SS400" or "CNS 2473 SM490" — do NOT use ASTM designations alone
+  • Weld size: "角焊縫 8 mm" (fillet); "全滲透對接焊（CJP）" or "部分滲透對接焊（PJP）"
+  • Bolt torque note: "高強度螺栓 M20 F10T，扭力扳手施拴扭矩 = XXX N·m，依 CNS 12209"
+  • Fabrication tolerance note: "製作及安裝精度依鋼構造建築物鋼結構施工規範第九章規定"
+  • Fireproofing: "防火被覆：噴塗防火材料，耐火時效 XX 小時（依建築技術規則第 70 條）"
+  • Line types: centerline = chain-dot (CL), hidden = dashed, cut plane = thick chain-dot
+  • Detail bubble: circle with detail number over sheet number (e.g. 3/S-12)
+  • Revision cloud and delta mark for any change after IFC issue`,
+  },
+
+  // ────────────────────────────────────────────
+  // 路橋工程：依 公路橋梁設計規範（交通部）、公路橋梁耐震設計規範、公路路線設計規範
+  // ────────────────────────────────────────────
+  '路橋工程': {
+    objects: [
+      { label: '橋面板 (Bridge Deck)',          en: 'reinforced concrete bridge deck slab with wearing surface' },
+      { label: '預力箱型梁 (PC Box Girder)',    en: 'post-tensioned prestressed concrete box girder' },
+      { label: 'PC I型梁 (PC I-Girder)',        en: 'precast prestressed concrete I-girder (AASHTO Type)' },
+      { label: '橋墩柱 (Pier Column)',          en: 'reinforced concrete single / double column bridge pier' },
+      { label: '帽梁 (Pier Cap / Bent Cap)',    en: 'reinforced concrete pier cap beam' },
+      { label: '橋台 (Abutment)',              en: 'reinforced concrete seat-type bridge abutment with wing wall' },
+      { label: '支承 (Bearing)',               en: 'elastomeric bearing pad or pot bearing detail' },
+      { label: '道路橫斷面 (Road X-Section)',  en: 'highway road cross-section with full pavement layers' },
+      { label: '伸縮縫 (Expansion Joint)',     en: 'modular expansion joint detail at bridge end' },
+    ],
+    presets: ['橋寬 12 m (雙向2車道)','橋寬 16 m (雙向4車道)','跨距 20 m','跨距 40 m','跨距 60 m','道路寬 7.5 m (省道)','車道寬 3.65 m (高速公路)'],
+    // ── 規範依據：公路橋梁設計規範（交通部）/ 公路橋梁耐震設計規範 / 公路工程施工規範 / 公路路線設計規範
+    spec: `Highway and bridge engineering drawing per Taiwan "公路橋梁設計規範" (MOTC, 2015) and "公路橋梁耐震設計規範" (MOTC, 2019).
+Material: Concrete f'c = 28~35 MPa per 公路橋梁設計規範; PC strand fpu = 1860 MPa (ASTM A416 Grade 270); Rebar SD420W per CNS 560; structural steel CNS 2473 SM490.
+Design method: LRFD-based approach per 公路橋梁設計規範; seismic performance level and ductility capacity check per 公路橋梁耐震設計規範.
+MANDATORY elements to draw:
+  BRIDGE SUPERSTRUCTURE:
+    • General arrangement (elevation + plan): span lengths, skew angle, bearing centerlines, expansion joint locations per 公路橋梁設計規範
+    • Deck cross-section: wearing surface (AC 50 mm or waterproofing + overlay), deck slab per 公路橋梁設計規範 Chapter 4
+    • Girder section at mid-span and at support: prestress tendon profile (parabolic drape), duct diameter, anchor block
+    • Shear key and diaphragm spacing at 1/4 and 1/2 span
+    • Deck reinforcement: top and bottom mat, transverse and longitudinal, overhang bar
+  BRIDGE SUBSTRUCTURE (per 公路橋梁設計規範 Chapter 6):
+    • Pier elevation and plan: column diameter/section, clear height, pile cap size
+    • Footing or pile cap: pile layout, pile head connection, seat width (≥ 400 mm per 公路橋梁耐震設計規範 for moderate seismic)
+    • Abutment: back wall, seat width note, wing wall, approach slab (6 m × full width per spec.)
+  ROAD CROSS-SECTION (per 公路路線設計規範):
+    • Pavement layers: surface course AC-13 50 mm / binder course AC-20 50 mm / base course 200 mm / subbase 150 mm
+    • Crown slope: 2% normal; superelevation diagram if on curve
+    • Shoulder width, guardrail post spacing (4 m), clear zone width
+    • Drainage: ditch cross-section, longitudinal slope ≥ 0.3%, outlet location per 公路排水設計規範`,
+    notes: `Annotation rules (all text in 繁體中文):
+  • Elevations: all grade elevations in meters to 3 decimal places per 公路橋梁設計規範 (e.g. EL. 52.345 m)
+  • Stationing: "STA. 1+234.56" format along road centerline
+  • Bearing callout: type (彈性支承 / 鉛芯橡膠支承 / 盆式支承), design vertical load (kN), max horizontal displacement (mm)
+  • Prestress annotation: "PC鋼絞線 φ15.2 mm（ASTM A416 Gr.270），初始預力 = 0.75fpu，總預力損失估計 15~20%"
+  • Pile callout: type (PC樁 / PHC樁 / 場鑄樁), diameter, length, design capacity (kN) per 公路橋梁設計規範 Ch.6
+  • Rebar: D-number notation per CNS 560 (D13, D16, D19…); show spiral / hoop in column per 公路橋梁耐震設計規範
+  • Design vehicle load note: "設計車輛荷重依公路橋梁設計規範 HS-20-44 或 T-Load"
+  • Traffic safety note: "施工期間車道管制依交通部施工交通維持計畫規定"`,
+  },
+
+  // ────────────────────────────────────────────
+  // 擋土護坡：依台灣坡地安全管理條例、大地工程規範、CNS
+  // ────────────────────────────────────────────
+  '擋土護坡': {
+    objects: [
+      { label: '重力式擋土牆 (Gravity Wall)',    en: 'mass gravity retaining wall (plain concrete or rubble masonry)' },
+      { label: '懸臂式擋土牆 (Cantilever Wall)', en: 'cantilever reinforced concrete retaining wall' },
+      { label: '加勁擋土牆 (MSE Wall)',          en: 'mechanically stabilized earth (MSE/GRS) retaining wall' },
+      { label: '排樁 (Soldier Pile Wall)',        en: 'soldier pile and lagging earth retention system' },
+      { label: '連續壁 (Diaphragm Wall)',         en: 'reinforced concrete diaphragm wall (slurry trench method)' },
+      { label: '地錨 (Ground Anchor)',           en: 'grouted strand ground anchor with corrosion-protected tendon' },
+      { label: '岩釘 (Rock Bolt)',              en: 'passive rock bolt with bearing plate and nut detail' },
+      { label: '蛇籠 (Gabion Wall)',            en: 'gabion basket retaining wall with geotextile filter' },
+      { label: '格框護坡 (Concrete Frame)',     en: 'concrete grid frame slope protection with vegetation infill' },
+    ],
+    presets: ['牆高 3 m','牆高 5 m','牆高 8 m','牆高 10 m','底板寬 B=0.6H','錨長 12 m (自由段 5 m)','連續壁厚 600 mm'],
+    // ── 規範依據：建築物基礎構造設計規範第七章擋土牆（內政部國土署）/ 水土保持技術規範第二二節擋土牆 / 建築技術規則
+    spec: `Earth retaining and slope stabilization drawing per Taiwan "建築物基礎構造設計規範" Ch.7 擋土牆 (NLMA, 2001) and "水土保持技術規範" Ch.22 (COA).
+MANDATORY elements to draw:
+  RETAINING WALL SECTION (per 建築物基礎構造設計規範 第7章):
+    • Full cross-section showing: wall body / heel / toe / key (if any)
+    • Soil pressure diagram: active earth pressure using Coulomb or Rankine method per Sec.7.3.2, including surcharge strip load
+    • Stability checks annotation (per Sec.7.4):
+        – Overturning FS ≥ 1.5 (long-term); FS ≥ 1.2 (seismic) per Sec.7.4.2
+        – Sliding FS ≥ 1.5 (long-term); FS ≥ 1.2 (seismic) per Sec.7.4.3
+        – Bearing capacity FS ≥ 3.0; total and differential settlement within allowable limits per Sec.7.4.4
+        – Overall (deep-seated) stability FS ≥ 1.5 (long-term), FS ≥ 1.2 (seismic), FS ≥ 1.1 (highest water table) per Sec.7.4.4
+    • Drainage system (CRITICAL, per Sec.7.2):
+        – Filter layer: 300 mm clean gravel wrapped in geotextile (nonwoven, ≥ 200 g/m²)
+        – Weep holes: φ75 mm PVC pipe @ 2.0 m spacing (H and V), with gravel filter sock
+        – Perforated collector pipe at footing connected to drainage blanket
+    • Backfill zone: select granular (non-plastic) per Sec.7.2; compaction ≥ 95% Modified Proctor
+    • Settlement monitoring point location noted on drawing
+  ANCHOR / NAIL:
+    • Ground anchor section: free length / bond length, grout body diameter, tendon cover
+    • Tendon: HDPE sheathing in free zone, trumpet and anchor head per design; proof test = 1.33×design load
+    • Rock bolt / soil nail: diameter, length, grouting pressure, head plate (鋼板+螺帽) detail
+  RETAINING WALL TYPES (per 水土保持技術規範 Sec.118):
+    • Height limits: 重力式 ≤ 4 m effective; 懸臂式 ≤ 8 m; 扶壁式 ≤ 10 m; 蛇籠 ≤ 4 m total
+    • Gabion: φ75 mm stone minimum long dimension; wire mesh galvanized; geotextile filter behind
+    • MSE wall: geogrid vertical spacing, pullout length, facing panel connection and 1H:50V batter`,
+    notes: `Annotation rules (all text in 繁體中文):
+  • Soil layer callout: 土層名稱, N值 (SPT-N), γ (kN/m³), φ (°), c (kPa) — per 建築物基礎構造設計規範 notation
+  • Earth pressure: Ka (主動土壓力係數), Ko (靜止土壓力係數) — show calculation formula reference (Coulomb/Rankine)
+  • Wall batter note: "牆面傾斜 1:XX (水平:垂直)"
+  • Ground anchor annotation: "地錨 φ150 mm, L=15m (自由段 6m / 固定段 9m), 設計拉力 T=600 kN"
+  • Geotextile: "不織布，單位重 ≥ 200 g/m²，透水率 / 搭接 ≥ 500 mm"
+  • Compaction note: "回填料夯實，Modified Proctor 相對夯實度 K ≥ 95%，依水土保持技術規範"
+  • Safety factor table: show FS (傾覆 / 滑動 / 承載 / 整體) in a bordered table on drawing per 建築物基礎構造設計規範 Sec.7.4
+  • Seismic earth pressure: "地震土壓力依 Mononobe-Okabe 法計算，設計地震係數依建築物耐震設計規範"`,
+  },
+
+  // ────────────────────────────────────────────
+  // 排水箱涵：依水利工程技術規範、下水道工程設施標準
+  // ────────────────────────────────────────────
+  '排水箱涵': {
+    objects: [
+      { label: '矩形箱涵 (RC Box Culvert)',      en: 'cast-in-place reinforced concrete box culvert' },
+      { label: '預鑄箱涵 (Precast Box Culvert)', en: 'precast reinforced concrete box culvert section' },
+      { label: '圓形涵管 (Circular Culvert)',    en: 'circular reinforced concrete or HDPE culvert pipe' },
+      { label: 'U型排水路 (U-Channel)',          en: 'precast U-shaped open drainage channel' },
+      { label: '集水井 (Manhole / Catch Basin)', en: 'reinforced concrete manhole with frame and cover' },
+      { label: '截水溝 (Intercepting Ditch)',    en: 'hillside intercepting drainage ditch (concrete-lined)' },
+      { label: '排水側溝 (Roadside Ditch)',      en: 'roadside drainage ditch with precast or cast-in-place lining' },
+      { label: '出水口保護 (Outlet Protection)', en: 'culvert outlet protection with riprap or energy dissipator' },
+    ],
+    presets: ['800×800 mm','1000×1000 mm','1200×1200 mm','1500×1500 mm','2000×1500 mm','管徑 φ600 mm','管徑 φ900 mm','管徑 φ1200 mm'],
+    // ── 規範依據：水利工程技術規範 / 下水道工程設施標準 / FHWA HEC-14 消能設計
+    spec: `Drainage and culvert engineering drawing per Taiwan Water Resources Agency Technical Specifications and MOEA drainage design guidelines.
+Hydraulic design basis: Manning's n = 0.013 (concrete), design discharge Q (m³/s) from rational method.
+MANDATORY elements to draw:
+  PLAN VIEW:
+    • Culvert/channel alignment with stationing, skew angle to road centerline
+    • Upstream and downstream headwall / wingwall plan shape
+    • Flow direction arrow (MANDATORY on all drainage drawings)
+    • Catch basin / manhole locations with spacing ≤ 50 m or at every change of direction
+  CROSS-SECTION VIEW:
+    • Box culvert / pipe: full wall and slab thickness, internal clear dimensions
+    • Rebar layout: top slab, bottom slab, side walls – show both interior and exterior bars
+    • Haunch (corner fillet): 150×150 mm min. with diagonal bar
+    • Bedding layer: gravel bedding 150 mm min.; concrete cradle for rigid pipe
+    • Backfill zone and compaction requirement
+    • Waterproofing: note if hydrostatic pressure or seepage concern (PVC waterstop at construction joints)
+  HYDRAULIC DATA TABLE (on drawing):
+    • Invert elevation at inlet (IL-IN) and outlet (IL-OUT)
+    • Pipe / channel slope S (%) – minimum 0.3% for self-cleaning
+    • Design flow Q, velocity V, depth of flow d/D ratio
+    • Headwater-to-diameter ratio HW/D ≤ 1.5 (non-pressure flow preferred)
+  OUTLET PROTECTION:
+    • Riprap apron: size (D50), length, thickness, geotextile filter below
+    • Energy dissipator type if V > 3 m/s`,
+    notes: `Annotation rules (all text in 繁體中文):
+  • Invert elevation: "管底高程 IL = XX.XXX m"
+  • Slope notation: "坡降 S = X.XX%"
+  • Pipe joint: "承插口接頭 / 平口橡膠環接頭"
+  • Manhole step: "踏步 φ20 mm 鍍鋅鋼筋 @ 300 mm"
+  • Frame and cover: "鑄鐵框蓋 750×750 mm, 承載荷重 T-25 (250 kN)"
+  • Note block: hydraulic data summary, Manning's n value, design frequency (return period)`,
+  },
+
+  // ────────────────────────────────────────────
+  // 水土保持：依水土保持技術規範（農委會）、坡地社區安全規定
+  // ────────────────────────────────────────────
+  '水土保持': {
+    objects: [
+      { label: '沉砂池 (Sedimentation Basin)',   en: 'temporary construction-site sedimentation basin' },
+      { label: '土壩/攔砂壩 (Check Dam)',        en: 'loose-rock or concrete check dam with overflow weir' },
+      { label: '固床工 (Grade Control Sill)',    en: 'concrete grade control structure (bed sill) in stream' },
+      { label: '土釘牆 (Soil Nail Wall)',        en: 'soil nail wall with reinforced shotcrete facing' },
+      { label: '生態護坡 (Bioengineered Slope)', en: 'bioengineered slope protection (live staking + geogrid)' },
+      { label: '植生袋擋牆 (Vegetated Bag Wall)',en: 'erosion control vegetated bag retaining structure' },
+      { label: '截水溝系統 (Runoff Control)',    en: 'hillside surface runoff interception and diversion system' },
+      { label: '跌水工 (Drop Structure)',        en: 'concrete drop structure for channel grade change' },
+    ],
+    presets: ['坡比 1:1 (45°)','坡比 1:1.5','坡比 1:2','土釘長 6 m @ 1.5 m','沉砂容積 ≥ 125 m³/ha','攔砂壩高 3 m'],
+    // ── 規範依據：水土保持技術規範（農業部）/ 水土保持工程設計參考圖冊（農業部水土保持局）/ 坡地社區安全規定
+    spec: `Soil and water conservation (SWC) facility drawing per Taiwan "水土保持技術規範" (COA, latest ed.) and "水土保持工程設計參考圖冊" (SWCB, Agricultural Council).
+MANDATORY elements to draw:
+  SEDIMENTATION BASIN (沉砂池, per 水土保持技術規範 Sec.91~93):
+    • Plan: basin shape, inlet pipe, skimmer or perforated riser outlet, emergency spillway location
+    • Section: storage depth 1.5~3.5 m per Sec.93; embankment slopes (3H:1V upstream / 2H:1V downstream)
+    • Design capacity: volume per USLE泥砂生產量估算; 臨時性 = 泥砂量 × 1.5; 永久性 ≥ 30 m³/ha (completed area)
+    • Dewatering pipe: φ200 mm PVC with trash rack; maintenance access road for machinery per Sec.93
+    • Basin maintenance note: "永久性沉砂池至少每年清除一次；臨時性每次豪雨後立即清除 (水土保持技術規範 Sec.93)"
+  CHECK DAM / SILL (節制壩, per 水土保持技術規範 Sec.51~52):
+    • Full elevation and cross-section: crest length, height, weir shape
+    • Design flood: 耐久性壩用重現期距25年；臨時性壩用10年 per Sec.52
+    • Stilling pool downstream: length ≥ 1.5× dam height, floor protection (riprap or concrete)
+    • Cut-off wall at base: depth ≥ 0.5 m into competent material
+  SOIL NAIL WALL (土釘牆, per 水土保持技術規範):
+    • Nail layout plan and section: nail length, inclination (10°~15° below horizontal), spacing (H×V)
+    • Nail section: steel bar D25~D32, grout body φ100~150 mm, head plate 200×200×10 mm
+    • Shotcrete facing: 150 mm, wire mesh φ6@150 EW, drainage weepholes φ50 PVC @ 1.5 m grid
+    • Global stability circle: minimum FS = 1.5 per 水土保持技術規範
+  BIOENGINEERED SLOPE (生態護坡, per 水土保持工程設計參考圖冊):
+    • Slope bench (水平階梯): width ≥ 1.5 m, inward slope 10%, drainage ditch behind each bench per 水土保持技術規範 Sec.89
+    • Layer: geogrid (HDPE biaxial) / growing medium 300 mm / native seed mix
+    • Live stake: spacing 300~600 mm staggered; native species priority per 水土保持工程設計參考圖冊`,
+    notes: `Annotation rules (all text in 繁體中文):
+  • Rainfall design: "設計降雨強度 I = XX mm/hr（重現期 XX 年），依水土保持技術規範 Sec.52"
+  • Sediment volume calculation: "泥砂生產量依通用土壤流失公式(USLE)估算，依水土保持技術規範 Sec.92"
+  • Slope gradient: ratio format "坡比 1:1.5 (垂直:水平)" or angle "坡角 θ = 34°"
+  • Geotextile: "不織布 (PET)，單位重 ≥ 200 g/m²，搭接 ≥ 500 mm"
+  • Native revegetation: "植生以當地原生種為優先，依農業部水土保持局水土保持工程設計參考圖冊推薦樹種"
+  • Maintenance note box: "依水土保持技術規範規定：竣工後定期巡查，暴雨後24小時內巡視沉砂池"
+  • Construction sequence: "施工順序依水土保持計畫：①截水溝→②沉砂池→③土石方→④植生覆蓋"
+  • Water and soil conservation plan note: "本工程依水土保持法規定，應擬具水土保持計畫，送主管機關審核"`,
+  },
+
+  // ────────────────────────────────────────────
+  // 景觀植栽：依造園景觀工程技術規範、都市計畫法、CNS
+  // ────────────────────────────────────────────
+  '景觀植栽': {
+    objects: [
+      { label: '喬木種植大樣 (Tree Planting)',     en: 'shade tree planting pit detail with support stake system' },
+      { label: '灌木花圃 (Shrub Bed)',             en: 'shrub planting bed with mulch and edging detail' },
+      { label: '地被植栽 (Ground Cover)',          en: 'ground cover planting layout with spacing grid' },
+      { label: '花台構造 (Raised Planter)',        en: 'raised planter box with structural wall and drainage layer' },
+      { label: '透水舖面 (Permeable Paving)',      en: 'permeable interlocking concrete pavement (PICP) system section' },
+      { label: '木平台 (Timber Deck)',             en: 'outdoor timber deck with subframe and joist detail' },
+      { label: '景觀水景 (Water Feature)',         en: 'landscape water feature with recirculating pump and waterproofing' },
+      { label: '景觀燈具基座 (Light Foundation)', en: 'landscape lighting pole foundation with conduit detail' },
+    ],
+    presets: ['喬木 H=4m, W=3m','胸徑 DBH=10 cm','支架高 2 m','植栽穴 1.2×1.2×1.0 m','覆土深 ≥ 1.0 m','透水磚 300×300×80 mm'],
+    // ── 規範依據：交通部公路景觀設計規範(109年版) / 內政部建築基地綠化設計技術規範 / 桃園市政府樹木植栽設計施工手冊 / 建築技術規則第17章綠建築基準
+    spec: `Landscape and planting construction drawing per:
+  (1) Taiwan "公路景觀設計規範" (MOTC, 2020, 109年版)
+  (2) "建築基地綠化設計技術規範" (MOLI, latest ed.) — CO₂ fixation index (固碳當量 TCO₂e/yr)
+  (3) "桃園市政府樹木植栽設計施工手冊" (Taoyuan City Government)
+  (4) 建築技術規則建築設計施工編第17章 綠建築基準
+MANDATORY elements to draw:
+  TREE PLANTING DETAIL (per 公路景觀設計規範 and 桃園市植栽設計施工手冊):
+    • Planting pit section: minimum 1.2 m wide × 1.0 m deep (or 2× root ball diameter)
+    • Growing medium layers (bottom to top):
+        – Drainage layer: 150 mm coarse gravel (D50 = 20~50 mm)
+        – Separation geotextile: nonwoven 150 g/m²
+        – Planting soil: improved loam (田土 5 : 有機堆肥 3 : 珍珠石 2 by volume)
+    • Root ball: shown as circle/ellipse with burlap; note "拆除麻布/鐵絲籠 per 桃園市植栽施工手冊"
+    • Support stake: 3× timber H-shaped frame; rubber tree tie; stake depth ≥ 600 mm below grade
+    • Root barrier: HDPE 600 mm deep adjacent to hardscape or utilities
+    • Irrigation: sub-surface drip or basin ring; give water system note per 公路景觀設計規範
+  PLANTING CONFIGURATION (per 公路景觀設計規範 109年版):
+    • Row tree spacing: native species examples — 茄苳 8~10 m, 樟樹 8~10 m, 台灣欒樹 6~8 m
+    • Central divider (中央分隔帶): select low-maintenance species with low pruning frequency
+    • Roadside green strip: consider air pollution buffering, noise reduction, small wildlife corridor per 規範 Sec.(3)
+    • Irrigation system: pre-embed water supply pipe and drip irrigation per 規範 Sec.(5)
+  GREEN AREA FIXATION INDEX (per 建築基地綠化設計技術規範):
+    • CO₂ fixation table: 生態複層 2.00 / 闊葉大喬木 1.50 / 闊葉小喬木、針葉、疏葉 1.00 / 棕櫚 0.66 / 灌木 0.50 / 蔓藤 0.40 / 草坪草花 0.30 (kgCO₂/(m².yr))
+    • Minimum cover depth: 大喬木覆土 ≥ 1.0 m; 灌木 ≥ 0.3 m; 草類 ≥ 0.2 m per 規範 Table 2
+    • Multi-story planting (複層綠化): encourage simultaneous ground-level and understory planting; CO₂ effects additive per 規範 Sec.6.5
+  PERMEABLE PAVING (per 建築技術規則 CNS):
+    • Layers: PICP 80 mm / bedding sand 25~40 mm / open-graded base 150~300 mm / subbase / subgrade`,
+    notes: `Annotation rules (all text in 繁體中文):
+  • Plant callout format (per 公路景觀設計規範 and 桃園市植栽施工手冊):
+    中文名 / 學名(斜體) / 規格 (H × W × DBH cm) / 株數
+    e.g.: 茄苳 / Bischofia javanica / H=4.0m, W=3.0m, DBH=10cm / 5株
+  • Species selection: "植栽種類優先選用台灣原生樹種，依公路景觀設計規範附錄及農業部林業署台灣原生植物建議名錄"
+  • Planting spacing: "種植間距依建築基地綠化設計技術規範表2，大喬木株距 ≥ 規定最小間距"
+  • Soil amendment: "改良土配比：田土5 / 有機堆肥3 / 珍珠石2（體積比），依桃園市植栽設計施工手冊"
+  • Mulch: "有機覆蓋物（木屑）厚 75 mm，距樹幹 50 mm 留空"
+  • Maintenance: "喬木：依桃園市植栽施工手冊，每年修剪2次（以不破壞樹形為原則）；灌木：每季修剪1次"
+  • Green building note: "基地綠化固碳當量計算依建築基地綠化設計技術規範，附 附表一 計算總表"`,
+  },
+
+  // ────────────────────────────────────────────
+  // 室內裝修：依建築技術規則、內政部建築構造編、CNS、防火規範
+  // ────────────────────────────────────────────
+  '室內裝修': {
+    objects: [
+      { label: '輕鋼架隔間牆 (Steel Stud Partition)', en: 'light-gauge steel stud partition wall system' },
+      { label: '矽酸鈣板天花 (Suspended Ceiling)',    en: 'suspended calcium silicate board ceiling grid system' },
+      { label: '地坪防水層 (Floor Waterproofing)',     en: 'floor waterproofing membrane system with finish layers' },
+      { label: '石材乾式施工 (Stone Dry-Lay)',         en: 'natural stone dry-lay wall cladding with back-anchor system' },
+      { label: '木作包覆牆 (Wood Feature Wall)',       en: 'wood veneer feature wall with substrate and concealed fixing' },
+      { label: '玻璃隔屏 (Glass Partition)',           en: 'full-height frameless tempered glass partition with patch fitting' },
+      { label: '金屬格柵天花 (Metal Baffle Ceiling)', en: 'linear metal baffle ceiling with suspension and lighting' },
+      { label: '踢腳及收頭 (Skirting / Trim Detail)', en: 'floor-to-wall skirting board and perimeter trim detail' },
+    ],
+    presets: ['輕隔間 75 mm (C型骨 65 mm)','輕隔間 100 mm (C型骨 90 mm)','天花淨高 2800 mm','天花結構高 3600 mm','石材厚 20 mm','木地板 18 mm (海島型)'],
+    // ── 規範依據：室內設計裝修製圖規範（中華民國室內設計裝修商業同業公會全國聯合會）/ CNS 11567 建築圖符號及圖例 / 建築技術規則裝修編 / CNS 3986
+    spec: `Interior fit-out construction drawing per:
+  (1) "室內設計裝修製圖規範" (NAID, 中華民國室內設計裝修商業同業公會全國聯合會)
+  (2) CNS 11567 建築圖符號及圖例 — interior drawings code prefix "I"
+  (3) Taiwan Building Technical Regulations (建築技術規則) Interior Renovation Chapter
+  (4) CNS 6183 一般結構用輕型鋼
+DRAWING SET REQUIRED (per 室內設計裝修製圖規範):
+  • 平面圖 (Floor Plan): furniture layout, door/window swing, partition locations, dimensions
+  • 天花板反射圖 (Reflected Ceiling Plan, RCP): ceiling grid, height datum, light fixtures, AC diffusers, sprinklers, smoke detectors, speakers per 室內設計裝修製圖規範 — THIS IS CRITICAL in interior drawings
+  • 立面圖 (Interior Elevation): each wall face, material indication, height dimensions, opening sizes
+  • 剖面圖 (Section): through key details showing layer build-up
+  • 大樣圖 / 細部圖 (Detail / Large-Scale): 1:5 or 1:10 node drawings
+MANDATORY elements per drawing type:
+  LIGHT PARTITION WALL:
+    • Elevation and section: total wall thickness, C-type stud size (65 mm or 90 mm), stud spacing (400 or 600 mm OC) per CNS 6183
+    • Track (U-runner) at floor and ceiling: screwed to slab @600 mm, acoustic sealant bead at perimeter
+    • Board layers: 矽酸鈣板 9 mm × 2 layers each face (note brand + thickness); board stagger joint (per 室內設計裝修製圖規範)
+    • Insulation: acoustic mineral wool density and thickness if required
+    • Fire rating: "防火時效 XX 小時（依內政部審定系統，送審號 XXXXXX）" if part of fire compartmentation
+    • Door/window frame: 2× studs at jamb, header track reinforcement
+  REFLECTED CEILING PLAN (per 室內設計裝修製圖規範 — 天花板圖為室內製圖核心要項):
+    • Grid: hanger wire (φ3.2 mm galv.) @ 900 mm grid, main tee, cross tee, perimeter wall angle
+    • Hanger attachment: concrete anchor or steel deck clip noted
+    • Ceiling material: 矽酸鈣板 9 mm (防潮型 for wet area) or mineral fiber tile 600×600 mm
+    • Services shown: light fixture type+circuit no., AC diffuser/return, sprinkler head, smoke detector, access panel
+    • Height datum: "CH = X,XXX" (ceiling height from finished floor, mm) labeled on plan
+    • Clearance note: "天花板面上方最小淨高 150 mm（管線穿越空間）"
+  FLOOR FINISH SYSTEM:
+    • Layer section (bottom to top): structural slab / leveling screed / waterproofing (PU 1.5 mm DFT, 300 mm up wall in wet areas) / protection screed / flexible tile adhesive (C2TE) / finish tile
+    • Expansion joint: 10 mm perimeter gap + silicone; field joints ≤ 6 m
+    • Threshold detail: flush or ramp ≤ 1:12 per 建築技術規則 無障礙設施
+  WALL CLADDING:
+    • Anchor system: for stone > 15 mm use 不銹鋼 SUS316 back-anchor clip, ≥ 2 anchors/panel
+    • Air gap: 20 mm behind cladding; panel joint with sealant or open-joint`,
+    notes: `Annotation rules (all text in 繁體中文):
+  • Drawing code: use "I" prefix per CNS 11567 (e.g. I-01 平面圖, I-02 天花板反射圖, I-03 立面圖)
+  • Material callout: 材料名稱 / 品牌型號（可選）/ 厚度 / 表面處理
+    e.g.: 義大利卡拉拉白大理石 / 厚 20 mm / 亮面拋光
+  • Fastener: "自攻螺絲 ST4.2×25 mm @ 200 mm, 鍍鋅，"
+  • Adhesive: "彈性瓷磚黏著劑，CNS 12611 C2TE 等級"
+  • Sealant: "矽利康 10 mm × 10 mm，中性，顏色配石材"
+  • Ceiling height notation: "CH = 2,800 mm（完成面）" — always specify as finished floor to finished ceiling
+  • Fire rating box: state "防火時效" and internal reference if wall is part of fire compartmentation per 建築技術規則
+  • Room finish schedule (裝修一覽表): 空間編號 / 地坪 / 牆面 / 天花 / 踢腳 / 備註 — mandatory on drawing per 室內設計裝修製圖規範
+  • Shop drawing submission note: "本圖為施工大樣圖，廠商施工前須提送樣品板及送審圖，經監造確認後方可施工"`,
+  },
+};
+
+// 圖面類型對照（中文介面 → 英文 Prompt）
+const typeMap = {
+  '平面圖':            'plan view (top view), showing layout, dimensions, and grid lines',
+  '斷面圖':            'cross-section view with full rebar / structural detail and dimensions',
+  '平面 + 斷面':       'combined plan view (top) and cross-section view (bottom) on same sheet',
+  '平面 + 斷面 + 細部':'plan view, cross-section view, and enlarged detail (large-scale node) on same sheet',
+  '立面圖':            'elevation view showing facade, height dimensions, and material indication',
+  '大樣圖':            'enlarged detail drawing (large scale), focusing on connection / junction node',
+  '鋼筋圖':            `reinforcing bar (rebar) drawing — a dedicated 配筋圖 (bar placement drawing) that shows ALL of the following:
+  PLAN (配筋平面圖):
+    • Every rebar position projected onto plan; bar marks (號數), spacing, and direction arrows
+    • Top and bottom mat distinguished by layer notation (TOP / BOT or 上層/下層)
+    • Column tie / spiral zones hatched; opening edge bars and corner bars called out
+  SECTION (配筋斷面圖):
+    • Full cross-section at critical locations (mid-span, support, column splice zone)
+    • All bar layers shown to scale with clear cover dimensions both faces
+    • Stirrup / tie / spiral drawn with correct hook angle (135° seismic hook per ACI 318 / 建築物混凝土結構設計規範)
+    • Bar spacing dimensioned; number of bars per layer noted
+  REBAR SCHEDULE TABLE (鋼筋數量表) — MANDATORY on same sheet:
+    | 編號 | 鋼筋號數 | 直徑(mm) | 間距(mm) | 長度(mm) | 數量 | 小計重量(kg) |
+    Include lap splice length (搭接長度) and development length (伸展長度) callouts per 建築物混凝土結構設計規範 Sec.25
+  HOOK & BEND GEOMETRY:
+    • Standard 90° hook extension = 12db; 135° seismic hook extension = 6db
+    • Minimum bend diameter per bar size shown as table or note
+  NOTES BOX: concrete f'c, rebar fy, cover, code reference (建築物混凝土結構設計規範 + CNS 560 SD420W)`,
+  '手繪圖':            `rough hand-drawn field sketch — looks like a working engineer's napkin sketch or site notebook drawing, NOT a finished technical drawing.
+CRITICAL STYLE REQUIREMENTS (must dominate the image):
+  • Drawn with a real ballpoint pen or HB pencil on slightly crumpled, off-white notebook paper or grid paper
+  • Lines are IMPERFECT: wobbly, slightly misaligned, occasional overrun at corners — NOT ruler-straight
+  • Proportions are approximate; minor distortions are acceptable and expected
+  • Text is casual hand-lettered Chinese (繁體中文): uneven stroke width, slightly tilted characters, like someone jotting notes quickly
+  • No CAD fonts, no perfect circles, no clean hatch fills — all freehand
+  • Dimension numbers written hastily next to rough arrows; not formal dimension chains
+  • Eraser smudges, light construction lines, or crossed-out corrections are welcome
+  • Paper texture visible; slight shadow or fold crease on paper edge is a plus
+SKETCH CONTENT (technically correct but loosely drawn):
+  • Show the main structural form and key dimensions only — omit fine details
+  • Rebar indicated as rough parallel lines or crossed lines, not precise bar schedules
+  • Labels are short abbreviations: "混凝土", "D16@200", "回填", "排水管" etc.
+  • One or two quick callout bubbles with arrows pointing to key elements
+  • Optional: a small isometric thumbnail sketch in corner to show 3D form
+OVERALL IMPRESSION: looks like a sketch drawn in 5–10 minutes at a job site meeting, scanned from a notebook`,
+  '爆炸圖':            `exploded view (分解圖 / 爆炸圖) — a technical exploded assembly illustration that shows how all components of the structure or assembly fit together.
+EXPLODED VIEW REQUIREMENTS:
+  OVERALL COMPOSITION:
+    • Use an isometric (等角投影) or axonometric projection at 30°–45° viewing angle
+    • Separate (explode) each distinct component along its assembly axis; maintain spatial alignment so components line up with their assembly position
+    • Explosion offset: each part displaced 80–150 mm (drawing units) from adjacent part along the assembly direction; NO overlapping of parts
+    • Show at minimum 4–8 distinct components; group sub-components that are permanently attached
+  LEADER LINES & CALLOUTS (MANDATORY):
+    • Thin dashed "explosion lines" (爆炸引線) connecting each component's displaced position back to its assembled position
+    • Leader line with filled arrowhead pointing to each component; horizontal shoulder at annotation end
+    • Each component labeled in 繁體中文: component name + material + key dimension (e.g. "底板 PL-20×300×400 mm, SS400")
+    • Part number balloon (球標): circle with sequential number (①②③…), listed in a 零件表 (parts list / BOM table) on the same sheet
+  PARTS LIST TABLE (零件表) — MANDATORY on same sheet:
+    | 件號 | 零件名稱 | 材料 / 規格 | 數量 | 備註 |
+    List every exploded component; include fasteners (bolts, anchors, dowels) as separate line items
+  ASSEMBLY SEQUENCE NOTE:
+    • Number the explosion sequence with arrows: Step ① → ② → ③ showing assembly order
+    • Note any special assembly requirement: torque value, grouting sequence, curing time, etc.
+  TECHNICAL DRAWING QUALITY:
+    • Line weight: component outlines 0.5 mm; explosion lines 0.18 mm dashed; leaders 0.25 mm
+    • Each component rendered with correct material hatch on cut faces (RC diagonal, steel solid fill, soil dots)
+    • Hidden edges shown as 0.25 mm dashed lines within each component
+    • Dimension the key overall dimensions only (length × width × height of assembled unit)
+  STYLE: clean technical illustration — NOT photorealistic, NOT hand-drawn; precision drafting quality with white background`,
+  '彩色3D透視圖':      `full-color photorealistic 3D perspective illustration (NOT a CAD drawing).
+Render the engineering structure as a high-quality, architecturally accurate 3D visualization with:
+  • Realistic materials and textures (concrete surface, steel finish, soil layers, vegetation as applicable)
+  • Natural lighting with soft shadows; daytime outdoor setting
+  • Transparent or cut-away view where helpful to reveal internal structure (rebar, layers, ducts)
+  • Color-coded material zones: concrete = grey, rebar = orange-red, soil = brown, steel = metallic silver, waterproofing = blue, gravel = tan
+  • Key dimension labels and material callouts in 繁體中文 overlaid as annotation bubbles
+  • Clean white or light grey background; no clutter; professional engineering visualization style
+  • Isometric or 3/4 perspective angle that best reveals the structure's key features`,
+};
+
+let current = 'RC結構';
+let selectedType = '平面圖';
+let selectedScale = '1:50';
+
+// ── UI 互動 ──
+// ── Combobox 狀態 ──
+let comboboxOptions = [];
+
+function setCategory(c, el) {
+  current = c;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  const o = document.getElementById('object');
+  o.innerHTML = '';
+  config[c].objects.forEach(i => {
+    const zhLabel = i.label.replace(/\s*\(.*?\)/g, '').trim();
+    o.innerHTML += `<option value="${i.en}">${zhLabel}</option>`;
+  });
+  comboboxOptions = config[c].presets;
+  document.getElementById('presetCustom').value = comboboxOptions[0] || '';
+  renderDropdown(comboboxOptions);
+  closeCombobox();
+}
+
+function renderDropdown(options) {
+  const sel = document.getElementById('presetSelect');
+  const cur = document.getElementById('presetCustom').value;
+  sel.innerHTML = '<option value="">─ 自行輸入 ─</option>' +
+    options.map(o => `<option value="${o.replace(/"/g,'&quot;')}"${o===cur?' selected':''}>${o}</option>`).join('');
+}
+
+function openCombobox() {
+  renderDropdown(comboboxOptions);
+  const sel = document.getElementById('presetSelect');
+  sel.classList.add('open');
+  sel.size = Math.min(comboboxOptions.length + 1, 8);
+  sel.focus();
+}
+
+function closeCombobox() {
+  const sel = document.getElementById('presetSelect');
+  sel.classList.remove('open');
+  sel.size = 0;
+}
+
+function toggleCombobox() {
+  const sel = document.getElementById('presetSelect');
+  if (sel.classList.contains('open')) { closeCombobox(); }
+  else { openCombobox(); }
+}
+
+function filterCombobox(val) {
+  const filtered = val
+    ? comboboxOptions.filter(o => o.toLowerCase().includes(val.toLowerCase()))
+    : comboboxOptions;
+  renderDropdown(filtered.length ? filtered : comboboxOptions);
+  closeCombobox();
+}
+
+function onPresetChange() {
+  const sel = document.getElementById('presetSelect');
+  const val = sel.value;
+  closeCombobox();
+  const input = document.getElementById('presetCustom');
+  input.value = val;
+  input.focus();
+  const len = input.value.length;
+  input.setSelectionRange(len, len);
+}
+
+// 點擊外部關閉
+document.addEventListener('click', function(e) {
+  if (!document.getElementById('presetWrap').contains(e.target)) closeCombobox();
+});
+
+function selectType(el) {
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  selectedType = el.textContent.trim();
+}
+
+function selectScale(el) {
+  document.querySelectorAll('.scale-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  selectedScale = el.textContent.trim();
+}
+
+// ── 核心：生成強化版 Prompt ──
+function generate() {
+  const obj    = document.getElementById('object').value;
+  const pre    = document.getElementById('presetCustom').value.trim();
+  const det    = document.getElementById('detail').value.trim();
+  const std    = document.getElementById('standard').value.trim();
+  const spec   = config[current].spec;
+  const notes  = config[current].notes;
+  const typeEn = typeMap[selectedType] || selectedType;
+
+  // 將中文尺寸標準轉換為英文輸出用文字（去除中文括號部分）
+  const preEn = pre.replace(/[，,。]/g, ',');
+
+  // 產生當日日期（西元格式）
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm   = String(now.getMonth() + 1).padStart(2, '0');
+  const dd   = String(now.getDate()).padStart(2, '0');
+  const todayStr = `${yyyy}-${mm}-${dd}`;
+
+  const scaleStr = selectedScale === 'NTS（不按比例）'
+    ? 'NTS (Not to Scale) — graphic scale bar only; do **NOT** imply any numeric scale ratio'
+    : '**' + selectedScale + '** — apply to ALL views; include ratio label + graphic scale bar; do **NOT** mix scales';
+
+  let prompt =
+`# ROLE & MISSION
+
+You are a **licensed professional civil/structural engineer and CAD drafter** with 20+ years of experience in Taiwan construction projects.
+Produce a **technically rigorous, code-compliant engineering drawing** based on the specifications below.
+Every element must reflect real-world construction practice in Taiwan.
+
+> **Language rule:** All annotation labels, dimension callouts, material notes, and title block text must be written in **Traditional Chinese（繁體中文）**.
+> Prompt language is English for AI clarity; all drawing output text must be 繁體中文.
+
+---
+
+# SECTION 1 — DRAWING SPECIFICATION
+
+| Field | Value |
+|---|---|
+| **Engineering Category** | ${current} / ${getCategoryEn(current)} |
+| **Drawing Subject** | ${obj} |
+| **Drawing Type & View** | ${typeEn} |
+| **Drawing Scale** | ${scaleStr} |
+| **Nominal Size / Geometry** | ${preEn} |
+
+> ⚠️ **Unit rule:** All dimensions are in **millimeters (mm)** unless a unit is explicitly stated alongside the value. Do NOT convert or restate dimensions in any other unit.`;
+
+  if (det) {
+    prompt += `\n| **Construction Details (User)** | ${det} |`;
+  }
+  if (std) {
+    prompt += `\n| **Design Code / Standard** | ${std} |`;
+  }
+
+  // ── 爆炸圖專屬補充區塊 ──
+  if (selectedType === '爆炸圖') {
+    prompt +=
+`
+
+---
+
+# SECTION 1-EX — EXPLODED VIEW INSTRUCTIONS ⚠️ APPLIES TO THIS DRAWING ONLY
+
+This drawing is an **Exploded View（爆炸圖 / 分解圖）**. The following rules OVERRIDE standard plan/section conventions and apply exclusively to this sheet.
+
+## Component Identification
+
+Before drawing, **identify and list every distinct component** of the object described in Section 1.
+Assign a sequential part number ①②③… to each component.
+Fasteners (bolts, anchors, dowel bars, nuts, washers) are each a separate numbered component.
+
+## Explosion Direction & Spacing
+
+| Component Layer | Explosion Axis | Minimum Offset |
+|---|---|---|
+| Top layers (slabs, cover, cap) | +Z (upward) | 1.5× component height |
+| Lateral components (walls, flanges, plates) | ±X or ±Y | 1.2× component width |
+| Bottom layers (footing, base plate, gravel) | −Z (downward) | 1.5× component height |
+| Fasteners | Along their own insertion axis | 60–80 mm |
+
+## Required Deliverables on This Sheet
+
+1. **Exploded Isometric View** — main drawing area (占圖面 65%)
+2. **Assembled Reference Thumbnail** — small inset (占圖面 15%) showing fully assembled state for orientation
+3. **Parts List Table（零件表）** — bottom or right column (占圖面 20%)
+4. **Assembly Sequence Key** — numbered step arrows ① → ② → ③ below or beside the main view
+
+## Zero-Overlap Rule ⚠️
+
+No exploded component outline may overlap any other component outline.
+If space is tight, increase explosion offset or split into two sub-views (top assembly / bottom assembly).`;
+  }
+
+  prompt +=
+`
+
+---
+
+# SECTION 2 — TECHNICAL & REGULATORY REQUIREMENTS
+
+## 2-A  Code-Based Drawing Content ⚠️ MANDATORY
+
+${spec}
+
+---
+
+## 2-B  Annotation & Drafting Rules
+
+${notes}
+
+### General Dimension & Leader Rules
+- All dimensions in **millimeters (mm)**; write "m" explicitly only when meter unit is intended
+- **Dimension string:** continuous chain dimension line with tick marks; overall dimension outside, partial dimensions inside
+- **Leader lines:** thin line with filled arrowhead pointing to element; annotation text at horizontal shoulder
+
+### Material Hatching — ISO / CNS Standard
+
+| Material | Hatch Pattern |
+|---|---|
+| Cast-in-place concrete | 45° diagonal lines @ 2 mm pitch |
+| Precast concrete | 45° diagonal lines + **"PC"** label |
+| Reinforcing steel | solid filled black circle or bar symbol |
+| Structural steel | solid filled section with outline |
+| Compacted soil / fill | random dots + **"▽ EL.XX.XXX"** grade line |
+| Gravel / drainage layer | open circles (pebble pattern) |
+| Geotextile | thin double dashed line + **"GT"** callout |
+| Waterproofing membrane | thick solid line on protected face |
+
+### Line Weight Schedule
+
+| Line Type | Weight |
+|---|---|
+| Outline / cut section | **0.5 ~ 0.7 mm** (heavy) |
+| Visible object lines | 0.35 mm (medium) |
+| Dimension / leader | 0.18 ~ 0.25 mm (thin) |
+| Centerline (CL) | 0.18 mm chain-dot |
+| Hidden lines | 0.25 mm dashed |
+
+---
+
+# SECTION 3 — DRAWING LAYOUT & TITLE BLOCK
+
+- **Sheet layout:** drawing area occupies **80%** of sheet; title block at **bottom-right corner**
+- **North arrow** + **graphic scale bar** mandatory on all plan views
+- **Revision cloud** + delta mark **（△）** for any updated region; revision log table inside title block
+
+### Title Block Fields（標題欄）
+> Each field in its own cell — do **NOT** merge cells, do **NOT** swap or reorder any field labels
+
+Render the title block as a bordered table with the **exact** field layout below.
+The **left column** of each split row contains the field shown first; the **right column** contains the field shown second.
+
+| Row | Left cell | Right cell |
+|---|---|---|
+| 1 | 工程名稱：[project name] | *(full width)* |
+| 2 | 圖面名稱：[drawing name] | *(full width)* |
+| 3 | 圖號：[drawing number] | 日期：**${todayStr}** |
+| 4 | **比例**：[scale ratio, e.g. 1:50] | 修訂版次：0 |
+| 5 | 繪圖：[ENGINEER NAME] | 審核：[SUPERVISOR NAME] |
+| 6 | 核准：[APPROVED BY NAME] | 核准：*(signature field)* |
+
+> ⚠️ **Critical label rule:**
+> - Row 3 right cell label is **「日期」**（date） — NOT「比例」
+> - Row 4 left cell label is **「比例」**（scale） — NOT「日期」
+> - These two labels must **never** be swapped
+
+> ⚠️ **Date format rule (for the 日期 cell):**
+> Display **only** the date value **${todayStr}** with no parentheses, no format hint, no suffix.
+> Do **NOT** append "(YYYY-MM-DD)", "(AD only)", "(西元)", or any Minguo era date（民國年）after the date.
+
+### General Notes Box（一般說明）— mandatory on every sheet
+1. Applicable design codes
+2. Material strengths / grades
+3. Concrete cover requirements
+4. Special construction notes
+
+---
+
+# SECTION 4 — PRE-DRAWING DIMENSION VERIFICATION ⚠️ DO THIS BEFORE DRAWING
+
+Before generating any graphic content, perform the following self-check and confirm each item is consistent. If any check fails, **correct the value first**, then proceed to draw.
+
+## 4-A  Scale Consistency Check
+
+| Check item | Rule |
+|---|---|
+| Nominal size vs. scale | At scale ${selectedScale === 'NTS（不按比例）' ? 'NTS' : selectedScale}, verify that the given nominal size renders at a physically reasonable size on the sheet. If the element would be smaller than 5 mm or larger than the sheet, flag and adjust the view or add an enlarged detail. |
+| All views same scale | Every view on this sheet must use the same stated scale unless explicitly labeled as a different scale with its own scale bar. |
+| Graphic scale bar | Scale bar divisions must match the stated scale ratio exactly — do NOT round or approximate. |
+
+## 4-B  Dimension Value Checks
+
+Verify **every** dimension against the rules below **before placing any annotation**. Treat this as a mandatory pre-flight checklist — do not skip any item.
+
+### ⚠️ MANDATORY FIRST STEP — Arithmetic Declaration Block
+
+**Before drawing a single dimension line**, produce the following declaration block in plain text.
+This block is your commitment — every dimension on the drawing must trace back to these computed values.
+If you cannot fill in every cell correctly, **stop and recompute before proceeding**.
+
+    == DIMENSION DECLARATION (fill in before drawing) ==
+    Member nominal size:     ___ × ___ mm   (外部總尺寸, from Section 1)
+    Concrete cover:          ___ mm         (from spec / General Notes)
+    Interior clear width:    ___ − 2×___ = ___ mm   (compute, do NOT assume)
+    Interior clear height:   ___ − 2×___ = ___ mm   (compute, do NOT assume)
+
+    Chain check HORIZONTAL:  cover + interior + cover = ___ + ___ + ___ = ___  (must equal nominal width)
+    Chain check VERTICAL:    cover + interior + cover = ___ + ___ + ___ = ___  (must equal nominal height)
+
+    Rebar count (from spec):   ___  bars
+    Rebar diameter:            D___  (= ___ mm)
+    Rebar spacing (if grid):   ___ mm
+    Space check: (___ − 1) × ___ + 2×___ + ___ = ___  (must be ≤ interior clear)
+    == END DECLARATION ==
+
+**A drawing with ANY dimension that contradicts this declaration is incorrect and must be regenerated.**
+
+---
+
+### Rule 1 — Dimension Chain Must Close（尺寸鏈閉合）⚠️ MOST CRITICAL
+
+For every direction (horizontal **and** vertical) on every view, the partial dimensions must sum to the overall dimension.
+**This rule must be verified by written arithmetic BEFORE placing a single dimension line.**
+
+#### 1-A  Mandatory Show-Your-Work Protocol
+
+For EVERY view, write out the following equations explicitly in a scratch block before drawing.
+Do not proceed until both equations balance exactly.
+
+    HORIZONTAL: left_cover + interior_clear_width + right_cover = overall_width
+    VERTICAL:   bottom_cover + interior_clear_height + top_cover = overall_height
+    interior_clear = overall − 2 × cover  (compute this first, use it consistently)
+
+**Example — 400×400 column, cover = 40 mm (CORRECT):**
+    interior_clear = 400 − 2×40 = 320 mm
+    HORIZONTAL: 40 + 320 + 40 = 400 (CORRECT)
+    VERTICAL:   40 + 320 + 40 = 400 (CORRECT)
+    Dimension string to draw: 40 | 320 | 40  (total = 400)
+
+#### 1-B  Failure Patterns — NEVER do these
+
+| ❌ Failure mode | Why it is wrong |
+|---|---|
+| Partial segments each labeled as the **overall** value (e.g., "400 + 400 + 400" on a 400 mm member) | Sum = 1200 ≠ 400 — chain does not close |
+| Two sub-segments labeled "400~400 \| 400~400" with overall also labeled "400" | Sum of subs = 800 ≠ 400 — the overall must be 800 or the subs must be 200 each |
+| Cover labeled at 40 mm in notes but dimension string shows cover = 0 (bar flush to face) | Cover inconsistency |
+| Overall labeled correctly but one sub-segment reuses the overall value | e.g., "40 + 400 + 40 = 480" but sub shows "400" instead of "320" |
+
+> ⚠️ **The single most common AI error:** copying the member's nominal size (e.g. 400) into every sub-segment instead of computing interior_clear = overall − 2×cover. **NEVER fill in sub-segment values without doing the subtraction first.**
+
+**Nominal size definition (MANDATORY — no exceptions):**
+The nominal size given in [Standard Geometry / Nominal Size] always refers to the **overall external dimension** (外部總尺寸).
+- Interior clear dimension = overall − 2 × cover
+- Do NOT interpret the nominal size as an interior or centreline dimension under any circumstance.
+
+---
+
+### Rule 2 — Cover Dimension Consistency（保護層標示一致）
+
+- Cover dimension arrows must point from the **outer face of concrete** to the **outer face of the outermost bar** — NOT to the bar centreline.
+- The cover value shown in dimension callouts must **exactly match** the value stated in the General Notes box (一般說明).
+- Typical values: beams / columns = **40 mm**; footings = **60 mm**; slabs = **20 mm** (top) / **40 mm** (bottom exposed).
+- Do NOT mix cover values between callouts on the same member unless top and bottom faces are intentionally different.
+
+---
+
+### Rule 3 — Label Both Sides of Symmetric Members（對稱構件兩側均須標示）
+
+- For rectangular columns, footings, and symmetric beams: label cover on **both** left and right faces; **both** top and bottom faces.
+- Do NOT label only one side and leave the other implied — both sides must be explicitly dimensioned.
+- If the member is symmetric, left cover = right cover; verify and label both.
+
+---
+
+### Rule 4 — Unit Consistency（單位一致）
+
+- All dimensions on the same sheet must use the **same unit (mm)** unless a separate unit symbol is explicitly written beside that value.
+- Do **NOT** mix mm and cm on the same drawing.
+- Flag and correct any value that appears anomalously small (e.g. "4" where cover should be "40 mm") or anomalously large (e.g. "4000" where column width should be "400 mm").
+
+---
+
+### Rule 5 — Rebar Count × Spacing vs. Member Dimension（鋼筋數量與尺寸對應）
+
+- For n bars at spacing s: occupied length = (n − 1) × s + 2 × side cover + bar diameter. This total must fit within the labeled member dimension.
+- The number of bar symbols (dots / circles) drawn in every cross-section must **exactly match** the bar mark quantity in the rebar schedule table (e.g. "8-D25" → exactly 8 dots visible in section).
+- Minimum clear bar spacing ≥ max(25 mm, 1.33 × max aggregate size, d_b) per ACI 318 / 建築物混凝土結構設計規範 Sec. 25.2.
+
+---
+
+### Rule 6 — No Overlapping or Redundant Labels（標注不重疊不重複）
+
+- Each dimension span must be labeled **once only** per view. Do NOT label the same span twice with different values.
+- **Do NOT stack two dimension lines for the identical span** (e.g., two parallel arrows both spanning the full 400 mm width, one labeled "400" above and another "400" below) — this is redundant and creates confusion about which value is authoritative.
+- If an overall dimension and its sub-segments are both shown, they must appear on **different dimension strings** (outer string = overall; inner string = sub-segments). The overall and its sub-segments must not occupy the same string level.
+- Dimension text, leader text, and bar callouts must **not** overlap section outlines, hatch lines, or bar symbols.
+- Leader lines must not cross each other; re-route if necessary.
+- If space is tight, use a detail bubble and enlarged detail view rather than cramming overlapping labels.
+
+Correct layout for a 400 mm span with cover:
+    Outer string:  |←————— 400 ——————→|   (overall)
+    Inner string:  |← 40 →|← 320 →|← 40 →|   (sub-segments)
+
+NEVER produce:
+    String 1:  |←— 400 —→|
+    String 2:  |←— 400 —→|   (duplicate of String 1 — PROHIBITED)
+
+## 4-C  Geometry Plausibility Check
+
+Before finalising the drawing, confirm:
+- [ ] Member proportions look visually correct for the stated scale (e.g. a 500×500 column is square, not rectangular)
+- [ ] Rebar is drawn **inside** the concrete outline with correct cover offset — not outside or on the boundary
+- [ ] Openings, haunches, and tapers are dimensioned from a clear datum (CL or face of member)
+- [ ] No dimension label overlaps another label or crosses a section line
+- [ ] **Dimension segment count sanity:** for a simple rectangular section the vertical string has exactly **3 segments** (cover | interior | cover) and the horizontal string has exactly **3 segments**. If you see 4 or more segments on a simple rectangular member with no haunches or openings, stop — you have introduced a phantom segment.
+- [ ] **Total segment count = number of physical zones.** Count the actual zones in the cross-section (left cover zone / rebar zone / right cover zone = 3). The number of sub-dimension segments must equal this count exactly.
+- [ ] Verify that NO sub-segment value equals the member's nominal size (e.g., a sub-segment showing "400" inside a 400 mm member is always wrong).
+
+> **If any check above reveals an error or ambiguity**, state the correction as a brief note at the top of the drawing in a box labeled **「尺寸核對說明」**, then proceed with the corrected values.
+
+---
+
+# SECTION 5 — OUTPUT QUALITY STANDARD
+
+The resulting drawing must meet the standard of a **construction document（施工圖）** issued for contractor tendering（招標）or on-site execution（施工）in Taiwan.
+It must be **indistinguishable from a drawing produced by a professional engineering or architectural firm registered in Taiwan**, following **CNS drawing conventions** and the design codes specified above.
+
+## 5-A  Pre-Submission Self-Verification Checklist
+
+Before outputting the final drawing, answer each item. If any answer is NO, correct and re-check before submitting.
+
+| # | Check item | Pass? |
+|---|---|---|
+| V1 | Every dimension chain closes (partial sum = overall) in BOTH horizontal and vertical directions | ☐ YES / ☐ NO |
+| V2 | No sub-segment value equals the member's full nominal size | ☐ YES / ☐ NO |
+| V3 | The same span is labeled exactly once per view (no duplicate parallel dimension strings) | ☐ YES / ☐ NO |
+| V4 | Concrete cover in dimension callouts matches the value in the General Notes box | ☐ YES / ☐ NO |
+| V5 | Rebar symbol count in section view matches the bar mark quantity (e.g., "8-D25" → 8 dots) | ☐ YES / ☐ NO |
+| V6 | Number of sub-segments per direction = number of distinct physical zones (typically 3 for a plain section) | ☐ YES / ☐ NO |
+| V7 | No dimension text, leader, or callout overlaps a section line, hatch, or bar symbol | ☐ YES / ☐ NO |
+| V8 | Scale bar divisions match the stated scale ratio exactly | ☐ YES / ☐ NO |
+
+**Include the completed checklist table at the bottom of your response**, below the drawing output, as proof of verification.`;
+
+  document.getElementById('output').value = prompt;
+}
+
+function getCategoryEn(c) {
+  const map = {
+    'RC結構':  'Reinforced Concrete Structure',
+    '鋼結構':  'Steel Structure',
+    '路橋工程':'Road and Bridge Engineering',
+    '擋土護坡':'Earth Retaining and Slope Protection',
+    '排水箱涵':'Drainage and Box Culvert',
+    '水土保持':'Soil and Water Conservation',
+    '景觀植栽':'Landscape and Planting',
+    '室內裝修':'Interior Construction',
+  };
+  return map[c] || c;
+}
+
+function copyText() {
+  const t = document.getElementById('output');
+  if (!t.value) return;
+  navigator.clipboard.writeText(t.value).then(() => showToast('✅ 提示語已複製到剪貼簿'));
+}
+
+function clearOutput() {
+  document.getElementById('output').value = '';
+}
+
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ── 初始化 ──
+window.onload = () => setCategory('RC結構', document.querySelector('.tab'));
+
+// ── PWA Service Worker 註冊 ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js', { scope: './' })
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.warn('SW registration failed:', err));
+  });
+}
+
+// ── PWA 安裝按鈕（Android Chrome / Edge / 桌機 Chrome）──
+(function () {
+  const btn = document.getElementById('pwaInstallBtn');
+  if (!btn) return;
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  if (standalone) return;                       // 已在安裝後的 App 內執行
+  let deferred = null;
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferred = e;
+    btn.hidden = false;
+  });
+  btn.addEventListener('click', async () => {
+    if (!deferred) return;
+    btn.hidden = true;
+    deferred.prompt();
+    try { await deferred.userChoice; } catch (_) {}
+    deferred = null;
+  });
+  window.addEventListener('appinstalled', () => { btn.hidden = true; deferred = null; });
+})();
+</script>
+<button id="pwaInstallBtn" class="pwa-install-btn" type="button" hidden>📲 安裝至主畫面</button>
+</body>
+</html>
